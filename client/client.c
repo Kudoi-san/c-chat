@@ -19,7 +19,7 @@ int sendline = 0;
 
 //socket
 int sock;
-int msgsize = 400;
+int msgsize = 378;
 
 bool cont = 1;
 
@@ -39,15 +39,13 @@ int main(int argc, char *argv[])
 	struct in_addr **addr_list;
 	int i;
 
-	if((he = gethostbyname(hostname)) == NULL)
-	{
+	if((he = gethostbyname(hostname)) == NULL){
 		herror("gethostbyname");
 		return 1;
 	}
 
 	addr_list = (struct in_addr **)he->h_addr_list;
-	for(int i = 0; addr_list[i] != NULL; i++)
-	{
+	for(int i = 0; addr_list[i] != NULL; i++){
 		strcpy(ip, inet_ntoa(*addr_list[i]));
 	}
 
@@ -60,8 +58,7 @@ int main(int argc, char *argv[])
 
 	//creating socket
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sock == -1)
-	{
+	if(sock == -1){
 		error("Failed to create socket");
 	}
 
@@ -70,8 +67,7 @@ int main(int argc, char *argv[])
 	server.sin_port = htons(9001);
 
 	//connect to the server
-	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0)
-	{
+	if(connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0){
 		error("Failed to connect to server");
 	}
 
@@ -115,14 +111,13 @@ int main(int argc, char *argv[])
 	pthread_create(&threads[0], &attr, sender, NULL);
 	pthread_create(&threads[1], &attr, listener, NULL);
 
-	while(cont);
+	while(cont);//keep threads alive
 	close(sock);
 	endwin();
 	return 0;
 }
 
-void error(const char *msg)
-{
+void error(const char *msg){
 	perror(msg);
 	exit(1);
 }
@@ -130,49 +125,30 @@ void error(const char *msg)
 void *sender()
 {
 	int nsock = sock;
-	char buffer[msgsize - 21];
+	char buffer[msgsize];
 
-	while(1)
-	{	
+	while(1){	
 		//zero the buffer for the message
-		bzero(buffer, msgsize - 21);
+		bzero(buffer, msgsize);
 		//get the input from the user in the sendwin window
-		mvwgetnstr(sendwin, 1, 1, buffer, (msgsize - 22));	
+		mvwgetnstr(sendwin, 1, 1, buffer, (msgsize - 1));	
 		
-		//checking for / commands
-		//all commands are 5 char in length
-		//but array size is 7, because 6 for space
-		//and the 7th for \0
-		char subbuff[7];
-		memcpy(subbuff, &buffer[0], 6);
-		subbuff[6] = '\0';
-
-		if(strcmp(buffer, "/quit") == 0)
-		{
+		if(strcmp(buffer, "/quit") == 0){
 			cont = 0;
 			pthread_exit(NULL);
-		}else if(strcmp(subbuff, "/nick ") == 0){
-			char nameReq[20];
-			for(int i = 6; i < 36; i++){
-				if(buffer[i] != ' ' && buffer[i] != '\0'){
-					nameReq[i - 6] = buffer[i];
-				}else{
-					nameReq[i - 6] = '\0';
-					break;
-				}
-			}
-			char *sendName = nameReq;
-			
-		}else{
-			if(chatline != LINES - 9){
-				chatline++;
-			}else{
-				scroll(chatwin);
-				box(chatwin, 0, 0);
-			}			
-			mvwprintw(chatwin, chatline, 1, buffer);
 		}
-		strncat(buffer, "\n", (msgsize - 21) - strlen(buffer));
+		/*else{
+			if(buffer[0] != '/'){
+				if(chatline != LINES - 9){
+					chatline++;
+				}else{
+					scroll(chatwin);
+					box(chatwin, 0, 0);
+				}			
+				mvwprintw(chatwin, chatline, 1, buffer);
+			}
+		}*/
+		strncat(buffer, "\n", (msgsize) - strlen(buffer));
 		write(nsock, buffer, strlen(buffer));
 		
 		//scroll(sendwin);
@@ -180,24 +156,24 @@ void *sender()
 		box(sendwin, 0, 0);
 		refresh();
 		wrefresh(sendwin);
-		wrefresh(chatwin);
+		//wrefresh(chatwin);
 	}
 }
 
 void *listener()
 {
 	int nsock = sock;
-	char buffer[msgsize];
+	int srvmsgsize = 400;//message size of the message from the server
+	char buffer[srvmsgsize];
 	NotifyNotification *n;
 	notify_init("test");
 
-	while(1)
-	{
-		bzero(buffer, msgsize);
+	while(1){
+		bzero(buffer, srvmsgsize);
 		refresh();
 		wrefresh(chatwin);
 		wrefresh(sendwin);
-		read(nsock, buffer, msgsize);
+		read(nsock, buffer, srvmsgsize);
 		n = notify_notification_new("chat.nijiura", buffer, 0);
 		notify_notification_set_timeout(n, 3000);
 		//g_object_unref(G_OBJECT(n));
@@ -206,12 +182,9 @@ void *listener()
 			printf("Notification failed to show\n");
 		}
 		
-		if(chatline != LINES - 9)
-		{
+		if(chatline != LINES - 9){
 			chatline++;
-		}
-		else
-		{
+		}else{
 			scroll(chatwin);
 			box(chatwin, 0, 0);
 		}
