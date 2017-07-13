@@ -246,12 +246,15 @@ void *connhandler(void *inc)
 			}
 		}else{
 			char finalmsg[400];
-			bzero(finalmsg, 400);
+			bzero(finalmsg, 400);//zero buffer
+			//add name: msg
 			strcpy(finalmsg, usr->name);
 			strcat(finalmsg, ": ");
 			strcat(finalmsg, clientmsg);
-			printf("%s", finalmsg);
-			strip_newline(finalmsg);	
+			//remove \n from the end of the string
+			strip_newline(finalmsg);
+			printf("%s\n", finalmsg);
+			//send to all users
 			send_to_ALL(finalmsg);
 		}	
 	}

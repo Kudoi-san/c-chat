@@ -133,30 +133,22 @@ void *sender()
 		//get the input from the user in the sendwin window
 		mvwgetnstr(sendwin, 1, 1, buffer, (msgsize - 1));	
 		
-		if(strcmp(buffer, "/quit") == 0){
+		//if /quit or /exit then exit client to terminal
+		if(strcmp(buffer, "/quit") == 0 || strcmp(buffer, "/exit") == 0){
 			cont = 0;
 			pthread_exit(NULL);
 		}
-		/*else{
-			if(buffer[0] != '/'){
-				if(chatline != LINES - 9){
-					chatline++;
-				}else{
-					scroll(chatwin);
-					box(chatwin, 0, 0);
-				}			
-				mvwprintw(chatwin, chatline, 1, buffer);
-			}
-		}*/
+
+		//add "\n" at the end of of the buffer
 		strncat(buffer, "\n", (msgsize) - strlen(buffer));
 		write(nsock, buffer, strlen(buffer));
 		
-		//scroll(sendwin);
+		//erase everything from sendwin and then re-draw sendwin
 		werase(sendwin);
 		box(sendwin, 0, 0);
+		//refresh sendwin after re-draw
 		refresh();
 		wrefresh(sendwin);
-		//wrefresh(chatwin);
 	}
 }
 
@@ -166,7 +158,7 @@ void *listener()
 	int srvmsgsize = 400;//message size of the message from the server
 	char buffer[srvmsgsize];
 	NotifyNotification *n;
-	notify_init("test");
+	notify_init("chat notify");
 
 	while(1){
 		bzero(buffer, srvmsgsize);
@@ -174,14 +166,19 @@ void *listener()
 		wrefresh(chatwin);
 		wrefresh(sendwin);
 		read(nsock, buffer, srvmsgsize);
+		//create new notification titled chat.nijiura
+		//msg from chat.nijiura is the body
 		n = notify_notification_new("chat.nijiura", buffer, 0);
+		//notification remains up for 3 seconds
 		notify_notification_set_timeout(n, 3000);
-		//g_object_unref(G_OBJECT(n));
 		
+		//display the notification
 		if(!notify_notification_show(n, 0)){
 			printf("Notification failed to show\n");
 		}
 		
+		//check what line we're currently on
+		//if at max chatlines for the window then scroll
 		if(chatline != LINES - 9){
 			chatline++;
 		}else{
@@ -189,6 +186,7 @@ void *listener()
 			box(chatwin, 0, 0);
 		}
 
+		//print the message to the chatwin screen
 		mvwprintw(chatwin, chatline, 1, buffer);
 	}	
 }
